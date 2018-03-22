@@ -31,12 +31,7 @@ fn unescape(s: &[String]) {
 
 fn raw(s: &[String]) {
     for (i, v) in s.iter().enumerate() {
-        print!("{}{}",
-               if i == 0 {
-                   ""
-               } else {
-                   " "
-               }, v);
+        print!("{}{}", if i == 0 { "" } else { " " }, v);
     }
 }
 
