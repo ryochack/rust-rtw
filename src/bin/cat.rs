@@ -1,8 +1,9 @@
 use std::env;
 use std::fs::File;
-use std::io;
+use std::io::{self, BufReader};
 use std::io::prelude::*;
 
+#[allow(dead_code)]
 struct Option {
     number_noblank: bool,
     show_ends: bool,
@@ -21,12 +22,23 @@ fn help() {
     println!("help contents is here.");
 }
 
-fn cat(reader: &mut Read, opt: &Option) {
+fn cat(reader: &mut BufRead, _opt: &Option) {
     let mut contents = String::new();
-    reader
-        .read_to_string(&mut contents)
-        .expect("something went wrong reading the file");
-    print!("{}", contents);
+    loop {
+        match reader.read_line(&mut contents) {
+            Ok(n) => {
+                if n == 0 {
+                    break;
+                }
+                print!("{}", contents);
+            }
+            Err(err) => {
+                print!("{}", err);
+                return;
+            }
+        }
+        contents.clear();
+    }
 }
 
 fn main() {
@@ -100,11 +112,12 @@ fn main() {
 
     println!("{:?}", files);
     for f in files {
-        let mut reader = if f == "-" {
+        let mut r = if f == "-" {
             Box::new(io::stdin()) as Box<Read>
         } else {
             Box::new(File::open(&f).expect("file not found")) as Box<Read>
         };
+        let mut reader = BufReader::new(r);
         cat(&mut reader, &opt);
     }
 }
