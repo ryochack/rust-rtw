@@ -4,12 +4,13 @@ use std::io::{self, BufReader};
 use std::io::prelude::*;
 
 #[allow(dead_code)]
-struct Option {
+struct CmdOption {
     number_noblank: bool,
     show_ends: bool,
     number: bool,
     number_count: u32,
     squeeze_blank: bool,
+    blank_count: u32,
     show_tabs: bool,
     show_nonprinting: bool,
 }
@@ -22,7 +23,7 @@ fn help() {
     println!("help contents is here.");
 }
 
-fn cat(reader: &mut BufRead, _opt: &Option) {
+fn cat(reader: &mut BufRead, opt: &mut CmdOption) {
     let mut contents = String::new();
     loop {
         match reader.read_line(&mut contents) {
@@ -30,7 +31,48 @@ fn cat(reader: &mut BufRead, _opt: &Option) {
                 if n == 0 {
                     break;
                 }
-                print!("{}", contents);
+                let newline_pat: &[_] = &['\n', '\r'];
+                contents = format!("{}", contents.trim_right_matches(newline_pat));
+                if opt.squeeze_blank {
+                    if contents.len() == 0 {
+                        opt.blank_count += 1;
+                        if opt.blank_count > 1 {
+                            continue;
+                        }
+                    } else {
+                        opt.blank_count = 0;
+                    }
+                }
+                if opt.show_nonprinting {
+                    let mut rep_line = String::new();
+                    for b in contents.as_str().bytes() {
+                        let c = match b {
+                            // ascii control characters
+                            9 => "\t".to_string(),
+                            0...31 => format!("^{}", (b + 64) as char),
+                            // ascii graphic characters
+                            32...126 => format!("{}", (b) as char),
+                            127 => "^?".to_string(),
+                            // 128 + 32 .. 128 + 126
+                            160...254 => format!("M-{}", (b - 128) as char),
+                            v if v > 254 => "M-^?".to_string(),
+                            v => format!("^{}", (v - 128 + 64) as char),
+                        };
+                        rep_line += c.as_str();
+                    }
+                    contents = rep_line;
+                }
+                if opt.show_tabs {
+                    contents = contents.replace("\t", "^I");
+                }
+                if (opt.number_noblank && contents.len() > 0) || opt.number {
+                    contents = format!("{:>6}  {}", opt.number_count, contents);
+                    opt.number_count += 1;
+                }
+                if opt.show_ends {
+                    contents = format!("{}$", contents);
+                }
+                println!("{}", contents);
             }
             Err(err) => {
                 print!("{}", err);
@@ -43,12 +85,13 @@ fn cat(reader: &mut BufRead, _opt: &Option) {
 
 fn main() {
     let mut files: Vec<String> = Vec::new();
-    let mut opt = Option {
+    let mut opt = CmdOption {
         number_noblank: false,
         show_ends: false,
         number: false,
-        number_count: 0,
+        number_count: 1,
         squeeze_blank: false,
+        blank_count: 0,
         show_tabs: false,
         show_nonprinting: false,
     };
@@ -110,7 +153,15 @@ fn main() {
         }
     }
 
-    println!("{:?}", files);
+    if opt.number_noblank {
+        // number nonempty output lines, overrides -n
+        opt.number = false;
+    }
+
+    if files.len() == 0 {
+        files.push("-".to_string());
+    }
+
     for f in files {
         let mut r = if f == "-" {
             Box::new(io::stdin()) as Box<Read>
@@ -118,6 +169,6 @@ fn main() {
             Box::new(File::open(&f).expect("file not found")) as Box<Read>
         };
         let mut reader = BufReader::new(r);
-        cat(&mut reader, &opt);
+        cat(&mut reader, &mut opt);
     }
 }
