@@ -1,0 +1,32 @@
+abcedfg
+tail4space    
+	1tab
+		2tab	1tab			3tab
+    4space	  	1tab2space1tab
+
+1blankline
+
+
+2blankline
+
+
+
+3blankline
+
+<nonprinting>
+Ctrl-A: 
+Ctrl-C: 
+Ctrl-D: 
+Ctrl-E: 
+Ctrl-M: 
+Ctrl-R: 
+Ctrl-W: 
+Cursor <: OD
+Cursor >: OC
+Cursor ^: OA
+Cursor v: OB
+PgUp: [5~
+PgDn: [6~
+Home: [1~
+End:  [4~
+
