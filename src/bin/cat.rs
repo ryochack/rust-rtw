@@ -31,7 +31,7 @@ fn cat(reader: &mut BufRead, opt: &mut CmdOption) {
                 if n == 0 {
                     break;
                 }
-                let newline_pat: &[_] = &['\n', '\r'];
+                let newline_pat: &[_] = &['\n'];
                 contents = format!("{}", contents.trim_right_matches(newline_pat));
                 if opt.squeeze_blank {
                     if contents.len() == 0 {
@@ -66,7 +66,7 @@ fn cat(reader: &mut BufRead, opt: &mut CmdOption) {
                     contents = contents.replace("\t", "^I");
                 }
                 if (opt.number_noblank && contents.len() > 0) || opt.number {
-                    contents = format!("{:>6}  {}", opt.number_count, contents);
+                    contents = format!("{:>6}\t{}", opt.number_count, contents);
                     opt.number_count += 1;
                 }
                 if opt.show_ends {

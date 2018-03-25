@@ -21,7 +21,7 @@ TEST_DATA=$1
 
 $CARGO_BUILD $COMMAND
 
-for OPTION in -A -b -e -E -n -s -t -T -u -v; do
+for OPTION in "" -A -b -e -E -n -s -t -T -u -v; do
     echo "----- TEST: cat ${OPTION} -----"
     $COMMAND $OPTION $TEST_DATA > $EXPECT_TEMPNAME
     $RUST_TARGET_COMMAND $OPTION $TEST_DATA > $OUT_TEMPNAME
