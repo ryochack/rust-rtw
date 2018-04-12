@@ -34,10 +34,8 @@ fn main() {
         let mut file;
         let mut freader;
         let mut bufin_stream: &mut BufRead = if fname == "-" {
-            // Box::new(io::stdin()) as Box<Read>
             &mut stdin_stream
         } else {
-            // Box::new(File::open(&f).expect("file not found")) as Box<Read>
             file = File::open(&fname).expect(&format!("cat: {}: No such file or directory", fname));
             freader = BufReader::new(file);
             &mut freader

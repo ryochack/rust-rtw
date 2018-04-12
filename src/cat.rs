@@ -2,7 +2,7 @@
 use super::cliopt;
 use std::io::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Default, PartialEq, Debug)]
 struct CmdOption {
     number_noblank: bool,
     show_ends: bool,
@@ -27,16 +27,7 @@ pub struct Cat {
 impl CatBuilder {
     pub fn new() -> CatBuilder {
         CatBuilder {
-            option: CmdOption {
-                number_noblank: false,
-                show_ends: false,
-                number: false,
-                squeeze_blank: false,
-                show_tabs: false,
-                show_nonprinting: false,
-                display_help: false,
-                display_version: false,
-            },
+            option: CmdOption::default(),
         }
     }
     pub fn with_show_all(&mut self) -> &mut Self {
@@ -280,6 +271,344 @@ impl Cat {
             Err(())
         } else {
             self.cat(in_stream, out_stream, err_stream)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::{BufReader, SeekFrom};
+    use std::process;
+
+    #[test]
+    fn test_build() {
+        let c = CatBuilder::new().build();
+        assert_eq!(CmdOption::default(), c.option);
+
+        let c = CatBuilder::new().with_show_all().build();
+        assert_eq!(
+            CmdOption {
+                show_ends: true,
+                show_tabs: true,
+                show_nonprinting: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_number_nonblank().build();
+        assert_eq!(
+            CmdOption {
+                number_noblank: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_e().build();
+        assert_eq!(
+            CmdOption {
+                show_ends: true,
+                show_nonprinting: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_show_ends().build();
+        assert_eq!(
+            CmdOption {
+                show_ends: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_number().build();
+        assert_eq!(
+            CmdOption {
+                number: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_squeeze_blank().build();
+        assert_eq!(
+            CmdOption {
+                squeeze_blank: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_t().build();
+        assert_eq!(
+            CmdOption {
+                show_tabs: true,
+                show_nonprinting: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_show_tabs().build();
+        assert_eq!(
+            CmdOption {
+                show_tabs: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_show_nonprinting().build();
+        assert_eq!(
+            CmdOption {
+                show_nonprinting: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_display_help().build();
+        assert_eq!(
+            CmdOption {
+                display_help: true,
+                ..Default::default()
+            },
+            c.option
+        );
+
+        let c = CatBuilder::new().with_display_version().build();
+        assert_eq!(
+            CmdOption {
+                display_version: true,
+                ..Default::default()
+            },
+            c.option
+        );
+    }
+
+    #[test]
+    fn test_parse() {
+        {
+            // "-A" | "--show-all"
+            let expects = CmdOption {
+                show_ends: true,
+                show_tabs: true,
+                show_nonprinting: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-A".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--show-all".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-b" | "--number-nonblank"
+            let expects = CmdOption {
+                number_noblank: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-b".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--number-nonblank".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-e"
+            let expects = CmdOption {
+                show_ends: true,
+                show_nonprinting: true,
+                ..Default::default()
+            };
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-e".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-E" | "--show-ends"
+            let expects = CmdOption {
+                show_ends: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-E".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--show-ends".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-n" | "--number"
+            let expects = CmdOption {
+                number: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-n".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--number".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-s" | "--squeeze-blank"
+            let expects = CmdOption {
+                squeeze_blank: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-s".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--squeeze-blank".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-t"
+            let expects = CmdOption {
+                show_tabs: true,
+                show_nonprinting: true,
+                ..Default::default()
+            };
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-t".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-T" | "--show-tabs"
+            let expects = CmdOption {
+                show_tabs: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-T".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--show-tabs".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-u"
+            let expects = CmdOption::default();
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-u".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "-v" | "--show-nonprinting"
+            let expects = CmdOption {
+                show_nonprinting: true,
+                ..Default::default()
+            };
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["-v".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--show-nonprinting".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "--help"
+            let expects = CmdOption {
+                display_help: true,
+                ..Default::default()
+            };
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--help".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+
+        {
+            // "--version"
+            let expects = CmdOption {
+                display_version: true,
+                ..Default::default()
+            };
+            let mut c = CatBuilder::new().build();
+            let files = c.parse(&["--version".to_string()]);
+            assert_eq!(expects, c.option);
+            assert_eq!(files, Ok(Vec::new()));
+        }
+    }
+
+    #[test]
+    fn test_cat() {
+        const TEST_DATA_PATH: &str = "ci-tests/test-data/cat_test.txt";
+        let mut file = File::open(&TEST_DATA_PATH).expect(&format!(
+            "cat: {}: No such file or directory",
+            TEST_DATA_PATH
+        ));
+        let options = ["-A", "-b", "-e", "-E", "-n", "-s", "-t", "-T", "-u", "-v"];
+
+        for o in options.iter() {
+            let mut c = CatBuilder::new().build();
+            let _ = c.parse(&[o.to_string()]);
+            let mut outstream: Vec<u8> = Vec::new();
+            let mut errstream: Vec<u8> = Vec::new();
+
+            {
+                let mut freader = BufReader::new(&file);
+                c.run(&mut freader, &mut outstream, &mut errstream)
+                    .expect("Failed to execute command");
+                let expects = process::Command::new("cat")
+                    .arg(o)
+                    .arg(TEST_DATA_PATH)
+                    .output()
+                    .expect("Failed to execute command");
+                assert_eq!(outstream, expects.stdout, "test with '{}' option", o);
+            }
+
+            file.seek(SeekFrom::Start(0)).expect("Failed to seek file");
         }
     }
 }
