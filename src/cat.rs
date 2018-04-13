@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use super::cliopt;
+use std::ffi::OsStr;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 #[derive(Clone, Default, PartialEq, Debug)]
 struct CmdOption {
@@ -92,8 +94,9 @@ impl CatBuilder {
 }
 
 impl Cat {
-    fn parse_option(&mut self, opt: &str) -> Result<(), String> {
-        match opt {
+    fn parse_option(&mut self, opt: &OsStr) -> Result<(), String> {
+        // let opt_ref = opt.to_str().unwrap();
+        match opt.to_str().unwrap() {
             "-A" | "--show-all" => {
                 // equivalent to -vET
                 self.option.show_nonprinting = true;
@@ -152,13 +155,13 @@ impl Cat {
                     format!(
                         "cat: invalid option -- '{}'\n\
                          Try 'cat --help' for more information.",
-                        opt.get(1..).unwrap()
+                        opt.to_str().unwrap().get(1..).unwrap()
                     )
                 } else {
                     format!(
                         "cat: unrecognized option '{}'\n\
                          Try 'cat --help' for more information.",
-                        opt
+                        opt.to_str().unwrap()
                     )
                 })
             }
@@ -166,13 +169,17 @@ impl Cat {
         Ok(())
     }
 
-    pub fn parse(&mut self, args: &[String]) -> Result<Vec<String>, String> {
-        let mut files: Vec<String> = Vec::new();
+    pub fn parse<I, S>(&mut self, args: I) -> Result<Vec<PathBuf>, String>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let mut files: Vec<PathBuf> = Vec::new();
         for arg in args {
-            if cliopt::is_option(arg) {
-                self.parse_option(arg)?;
+            if cliopt::is_option(arg.as_ref()) {
+                self.parse_option(arg.as_ref())?;
             } else {
-                files.push(arg.to_string());
+                files.push(PathBuf::from(arg.as_ref()));
             }
         }
         Ok(files)
@@ -403,12 +410,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-A".to_string()]);
+            let files = c.parse(&["-A"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--show-all".to_string()]);
+            let files = c.parse(&["--show-all"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -421,12 +428,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-b".to_string()]);
+            let files = c.parse(&["-b"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--number-nonblank".to_string()]);
+            let files = c.parse(&["--number-nonblank"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -439,7 +446,7 @@ mod tests {
                 ..Default::default()
             };
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-e".to_string()]);
+            let files = c.parse(&["-e"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -452,12 +459,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-E".to_string()]);
+            let files = c.parse(&["-E"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--show-ends".to_string()]);
+            let files = c.parse(&["--show-ends"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -470,12 +477,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-n".to_string()]);
+            let files = c.parse(&["-n"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--number".to_string()]);
+            let files = c.parse(&["--number"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -488,12 +495,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-s".to_string()]);
+            let files = c.parse(&["-s"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--squeeze-blank".to_string()]);
+            let files = c.parse(&["--squeeze-blank"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -506,7 +513,7 @@ mod tests {
                 ..Default::default()
             };
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-t".to_string()]);
+            let files = c.parse(&["-t"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -519,12 +526,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-T".to_string()]);
+            let files = c.parse(&["-T"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--show-tabs".to_string()]);
+            let files = c.parse(&["--show-tabs"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -533,7 +540,7 @@ mod tests {
             // "-u"
             let expects = CmdOption::default();
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-u".to_string()]);
+            let files = c.parse(&["-u"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -546,12 +553,12 @@ mod tests {
             };
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["-v".to_string()]);
+            let files = c.parse(&["-v"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
 
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--show-nonprinting".to_string()]);
+            let files = c.parse(&["--show-nonprinting"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -563,7 +570,7 @@ mod tests {
                 ..Default::default()
             };
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--help".to_string()]);
+            let files = c.parse(&["--help"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -575,7 +582,7 @@ mod tests {
                 ..Default::default()
             };
             let mut c = CatBuilder::new().build();
-            let files = c.parse(&["--version".to_string()]);
+            let files = c.parse(&["--version"]);
             assert_eq!(expects, c.option);
             assert_eq!(files, Ok(Vec::new()));
         }
@@ -592,7 +599,7 @@ mod tests {
 
         for o in options.iter() {
             let mut c = CatBuilder::new().build();
-            let _ = c.parse(&[o.to_string()]);
+            let _ = c.parse(&[o]);
             let mut outstream: Vec<u8> = Vec::new();
             let mut errstream: Vec<u8> = Vec::new();
 

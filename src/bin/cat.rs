@@ -4,6 +4,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
+use std::path::PathBuf;
 use std::process;
 
 fn main() {
@@ -15,7 +16,7 @@ fn main() {
     let mut stderr_stream = se.lock();
 
     let args: Vec<String> = env::args().skip(1).collect();
-    let mut files: Vec<String>;
+    let mut files: Vec<PathBuf>;
 
     let mut cat = cat::CatBuilder::new().build();
     match cat.parse(args.as_slice()) {
@@ -27,16 +28,19 @@ fn main() {
     }
 
     if files.len() == 0 {
-        files.push("-".to_string());
+        files.push(PathBuf::from("-"));
     }
 
     for fname in files {
         let mut file;
         let mut freader;
-        let mut bufin_stream: &mut BufRead = if fname == "-" {
+        let mut bufin_stream: &mut BufRead = if fname.to_str().unwrap() == "-" {
             &mut stdin_stream
         } else {
-            file = File::open(&fname).expect(&format!("cat: {}: No such file or directory", fname));
+            file = File::open(&fname).expect(&format!(
+                "cat: {}: No such file or directory",
+                fname.to_str().unwrap()
+            ));
             freader = BufReader::new(file);
             &mut freader
         };
