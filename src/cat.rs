@@ -185,20 +185,25 @@ impl Cat {
         Ok(files)
     }
 
-    fn help(&self, out_stream: &mut Write) {
+    fn help<W: Write>(&self, out_stream: &mut W) {
         writeln!(out_stream, "help contents is here.").unwrap();
     }
 
-    fn version(&self, out_stream: &mut Write) {
+    fn version<W: Write>(&self, out_stream: &mut W) {
         writeln!(out_stream, "rust cat version 0.1.0").unwrap();
     }
 
-    fn cat(
+    fn cat<R, W, E>(
         &mut self,
-        in_stream: &mut BufRead,
-        out_stream: &mut Write,
-        err_stream: &mut Write,
-    ) -> Result<(), ()> {
+        in_stream: &mut R,
+        out_stream: &mut W,
+        err_stream: &mut E,
+    ) -> Result<(), ()>
+    where
+        R: BufRead + ?Sized,
+        W: Write,
+        E: Write,
+    {
         if self.option.number_noblank {
             // number nonempty output lines, overrides -n
             self.option.number = false;
@@ -264,12 +269,17 @@ impl Cat {
         Ok(())
     }
 
-    pub fn run(
+    pub fn run<R, W, E>(
         &mut self,
-        in_stream: &mut BufRead,
-        out_stream: &mut Write,
-        err_stream: &mut Write,
-    ) -> Result<(), ()> {
+        in_stream: &mut R,
+        out_stream: &mut W,
+        err_stream: &mut E,
+    ) -> Result<(), ()>
+    where
+        R: BufRead + ?Sized,
+        W: Write,
+        E: Write,
+    {
         if self.option.display_version {
             self.version(out_stream);
             Err(())

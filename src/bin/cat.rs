@@ -34,7 +34,7 @@ fn main() {
     for fname in files {
         let mut file;
         let mut freader;
-        let mut bufin_stream: &mut BufRead = if fname.to_str().unwrap() == "-" {
+        let mut ref_in_stream: &mut BufRead = if fname.to_str().unwrap() == "-" {
             &mut stdin_stream
         } else {
             file = File::open(&fname).expect(&format!(
@@ -44,7 +44,7 @@ fn main() {
             freader = BufReader::new(file);
             &mut freader
         };
-        if cat.run(&mut bufin_stream, &mut stdout_stream, &mut stderr_stream)
+        if cat.run(ref_in_stream, &mut stdout_stream, &mut stderr_stream)
             .is_err()
         {
             process::exit(1);
