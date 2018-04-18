@@ -3,7 +3,7 @@ use rtw::cat;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{self, BufReader};
+use std::io::{self, BufReader, BufWriter};
 use std::path::PathBuf;
 use std::process;
 
@@ -11,7 +11,7 @@ fn main() {
     let si = io::stdin();
     let mut stdin_stream = BufReader::new(si.lock());
     let so = io::stdout();
-    let mut stdout_stream = so.lock();
+    let mut stdout_stream = BufWriter::new(so.lock());
     let se = io::stderr();
     let mut stderr_stream = se.lock();
 
